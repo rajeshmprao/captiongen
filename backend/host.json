@@ -4,5 +4,14 @@
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
+  },
+  "extensions": {
+    "http": {
+      "cors": {
+        "allowedOrigins": ["http://localhost:3000", "https://rajeshmprao.github.io"],
+        "allowedMethods": ["POST", "OPTIONS"],
+        "allowedHeaders": ["Content-Type"]
+      }
+    }
   }
 }

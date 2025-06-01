@@ -8,7 +8,7 @@ module.exports = async function (context, req) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, x-api-key, x-caption-type",
+    "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400"
   };
 
@@ -29,63 +29,50 @@ module.exports = async function (context, req) {
     context.res = { 
       status: 405, 
       headers: corsHeaders,
-      body: { error: "Use POST with binary data." } 
-    };
-    return;
-  }
-
-  // Shared-secret check
-  const SHARED_SECRET = process.env["SHARED_SECRET"];
-  const incomingKey = (req.headers["x-api-key"] || "").toString();
-  if (!incomingKey || incomingKey !== SHARED_SECRET) {
-    context.log.warn("⛔ Unauthorized");
-    context.res = { 
-      status: 401, 
-      headers: corsHeaders,
-      body: { error: "Unauthorized" } 
+      body: { error: "Use POST with JSON data." } 
     };
     return;
   }
 
   try {
     // Check content type
-    if (req.headers["content-type"] !== "application/octet-stream") {
-      throw new Error("Content-Type must be application/octet-stream");
+    if (!req.headers["content-type"]?.includes("application/json")) {
+      throw new Error("Content-Type must be application/json");
     }
 
-    context.log("▶ Processing raw binary upload");
+    context.log("▶ Processing JSON payload");
     
-    // Get caption type from custom header
-    const captionType = req.headers["x-caption-type"] || "default";
+    // Parse JSON body
+    const { image, captionType = "default", apiKey } = req.body;
     
-    // Get the raw body as buffer - add more robust handling
-    let fileBuffer;
-    
-    // Debug logging to see what we're getting
-    context.log(`▶ req.rawBody type: ${typeof req.rawBody}, instanceof Buffer: ${req.rawBody instanceof Buffer}`);
-    context.log(`▶ req.body type: ${typeof req.body}, instanceof Buffer: ${req.body instanceof Buffer}`);
-    
-    if (req.rawBody instanceof Buffer) {
-      fileBuffer = req.rawBody;
-      context.log("✓ rawBody is a Buffer");
-    } else if (req.body instanceof Buffer) {
-      fileBuffer = req.body;
-      context.log("✓ body is a Buffer");
-    } else if (req.rawBody) {
-      // Try to convert from string if needed
-      context.log(`⚠ rawBody is not a Buffer, trying to convert from ${typeof req.rawBody}`);
-      fileBuffer = Buffer.from(req.rawBody, 'binary');
-    } else if (req.body) {
-      // Try req.body as fallback
-      context.log(`⚠ body is not a Buffer, trying to convert from ${typeof req.body}`);
-      fileBuffer = Buffer.from(req.body, 'binary');
-    } else {
-      throw new Error("No request body found (checked req.rawBody and req.body)");
+    if (!image || !apiKey) {
+      throw new Error("Missing required fields: image and apiKey");
+    }
+
+    // Shared-secret check
+    const SHARED_SECRET = process.env["SHARED_SECRET"];
+    if (apiKey !== SHARED_SECRET) {
+      context.log.warn("⛔ Unauthorized");
+      context.res = { 
+        status: 401, 
+        headers: corsHeaders,
+        body: { error: "Unauthorized" } 
+      };
+      return;
     }
     
-    context.log(`▶ Received raw image (bytes: ${fileBuffer.length})`);
-    context.log(`▶ First 20 bytes (hex): ${fileBuffer.slice(0, 20).toString('hex')}`);
     context.log(`▶ Received captionType: ${captionType}`);
+
+    // Convert base64 to buffer
+    let fileBuffer;
+    try {
+      // Remove data URL prefix if present (data:image/jpeg;base64,)
+      const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '');
+      fileBuffer = Buffer.from(base64Data, 'base64');
+      context.log(`▶ Converted base64 to buffer (bytes: ${fileBuffer.length})`);
+    } catch (base64Error) {
+      throw new Error("Invalid base64 image data");
+    }
 
     // Validate the buffer before processing
     if (!fileBuffer || fileBuffer.length === 0) {

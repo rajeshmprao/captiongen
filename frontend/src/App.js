@@ -13,8 +13,8 @@ function App() {
   const [error, setError] = useState('');
   const [apiKey, setApiKey] = useState('');
 
-  // Use relative URL to leverage the proxy in package.json
-  const API_URL = process.env.REACT_APP_API_URL || '/api/GenerateCaption';
+  // Use environment variable with fallback for API URL
+  const API_URL = process.env.REACT_APP_API_URL || 'https://captiongen-func-xyz.azurewebsites.net/api/GenerateCaption';
 
   const handleImageSelect = (file) => {
     setImage(file);
@@ -39,16 +39,28 @@ function App() {
     setCaption('');
 
     try {
-      const imageBuffer = await image.arrayBuffer();
+      // Convert file to base64
+      const base64Image = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // Remove the data URL prefix to get just the base64 string
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(image);
+      });
       
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
-          'x-api-key': apiKey.trim(),
-          'Content-Type': 'application/octet-stream',
-          'x-caption-type': captionType
+          'Content-Type': 'application/json'
         },
-        body: imageBuffer
+        body: JSON.stringify({
+          image: base64Image,
+          captionType: captionType,
+          apiKey: apiKey.trim()
+        })
       });
 
       const data = await response.json();
