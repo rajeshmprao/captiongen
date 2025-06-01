@@ -1,0 +1,16 @@
+{
+  "name": "captiongen-testing",
+  "version": "1.0.0",
+  "description": "Testing suite for AI Caption Generator",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test-captions.js",
+    "report": "node test-captions-html.js",
+    "test:local": "API_URL=http://localhost:7071/api/GenerateCaption node test-captions.js",
+    "test:prod": "API_URL=https://captiongen-func-xyz.azurewebsites.net/api/GenerateCaption node test-captions.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {}
+}

@@ -46,3 +46,19 @@ __pycache__/
 __blobstorage__
 __queuestorage__
 __azurite_db*__.json
+
+# Frontend
+frontend/node_modules
+frontend/build
+frontend/.env.local
+
+# Testing
+testing/node_modules
+testing/caption-results.json
+testing/caption-results.html
+testing/images/*
+!testing/images/.gitkeep
+
+# Backend
+backend/node_modules
+backend/local.settings.json

@@ -1,0 +1,39 @@
+.image-uploader {
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  padding: 40px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-uploader:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.upload-content {
+  text-align: center;
+  color: #666;
+}
+
+.upload-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 20px;
+  color: #999;
+}
+
+.upload-content p {
+  margin: 10px 0;
+  font-size: 1.1rem;
+}
+
+.file-types {
+  font-size: 0.9rem;
+  color: #999;
+}

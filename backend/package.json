@@ -1,0 +1,15 @@
+{
+  "name": "captiongen-backend",
+  "version": "1.0.0",
+  "description": "Azure Functions backend for AI Caption Generator",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet...\"",
+    "deploy": "func azure functionapp publish captiongen-func-xyz --build remote"
+  },
+  "dependencies": {
+    "openai": "^5.0.1",
+    "sharp": "^0.34.2"
+  },
+  "devDependencies": {}
+}
