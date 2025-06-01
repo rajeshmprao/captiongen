@@ -1,0 +1,14 @@
+{
+  "name": "captiongen-func",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet...\""
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "openai": "^5.0.1"
+  }
+}
