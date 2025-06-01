@@ -119,3 +119,170 @@
   color: #666;
   line-height: 1.4;
 }
+
+.control-mode-toggle {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.control-mode-toggle label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.9em;
+  color: #666;
+  cursor: pointer;
+}
+
+.control-mode-toggle input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Caption display improvements - ensure complete layout control */
+.caption-display {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  position: relative;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.caption-text {
+  font-size: 1.1em;
+  line-height: 1.6;
+  color: #2c3e50;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  flex: 1;
+  min-height: 60px;
+  display: flex;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0;
+  margin: 0;
+}
+
+.caption-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #e9ecef;
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+.caption-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.caption-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.copy-button {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.copy-button:hover {
+  background: #2980b9;
+  transform: translateY(-1px);
+}
+
+.copy-button:active {
+  transform: translateY(0);
+}
+
+.copy-feedback {
+  color: #27ae60;
+  font-size: 0.8em;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  margin-right: 10px;
+}
+
+.copy-feedback.show {
+  opacity: 1;
+}
+
+.character-count {
+  color: #7f8c8d;
+  font-size: 0.8em;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .caption-display {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .caption-text {
+    font-size: 1em;
+    min-height: 50px;
+  }
+
+  .caption-actions {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .caption-info {
+    align-items: center;
+    text-align: center;
+  }
+
+  .caption-controls {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .copy-button {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.9em;
+  }
+
+  .character-count {
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .caption-display {
+    padding: 12px;
+    margin: 12px 0;
+  }
+
+  .caption-text {
+    font-size: 0.95em;
+    line-height: 1.5;
+  }
+}

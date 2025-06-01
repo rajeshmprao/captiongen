@@ -3,11 +3,21 @@ import './App.css';
 import ImageUploader from './components/ImageUploader';
 import CaptionDisplay from './components/CaptionDisplay';
 import CaptionTypeSelector from './components/CaptionTypeSelector';
+import VibeSliders from './components/VibeSliders';
 
 function App() {
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [captionType, setCaptionType] = useState('default');
+  const [vibes, setVibes] = useState({
+    humor: 30,
+    romance: 20,
+    energy: 50,
+    formality: 20,
+    sarcasm: 10,
+    poeticism: 20
+  });
+  const [useVibeSliders, setUseVibeSliders] = useState(false); // Default to traditional system
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,16 +61,24 @@ function App() {
         reader.readAsDataURL(image);
       });
       
+      // Prepare request body based on which system is being used
+      const requestBody = {
+        image: base64Image,
+        apiKey: apiKey.trim()
+      };
+
+      if (useVibeSliders) {
+        requestBody.vibes = vibes;
+      } else {
+        requestBody.captionType = captionType;
+      }
+      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          image: base64Image,
-          captionType: captionType,
-          apiKey: apiKey.trim()
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
@@ -110,10 +128,29 @@ function App() {
         </div>
 
         <div className="controls-section">
-          <CaptionTypeSelector 
-            selectedType={captionType} 
-            onTypeChange={setCaptionType} 
-          />
+          <div className="control-mode-toggle">
+            <label>
+              <input
+                type="checkbox"
+                checked={useVibeSliders}
+                onChange={(e) => setUseVibeSliders(e.target.checked)}
+              />
+              Use Advanced Vibe Control (Beta)
+            </label>
+          </div>
+
+          {useVibeSliders ? (
+            <VibeSliders 
+              vibes={vibes}
+              onVibesChange={setVibes}
+            />
+          ) : (
+            <CaptionTypeSelector 
+              selectedType={captionType} 
+              onTypeChange={setCaptionType} 
+            />
+          )}
+
           <button 
             className="generate-button"
             onClick={generateCaption}

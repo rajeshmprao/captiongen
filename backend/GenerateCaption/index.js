@@ -1,5 +1,6 @@
 const OpenAI = require("openai");
 const Sharp = require("sharp");
+const { generateInstructions } = require("./promptGenerator");
 
 module.exports = async function (context, req) {
   context.log("→ GenerateCaption was called");
@@ -42,8 +43,8 @@ module.exports = async function (context, req) {
 
     context.log("▶ Processing JSON payload");
     
-    // Parse JSON body
-    const { image, captionType = "default", apiKey } = req.body;
+    // Parse JSON body - support both legacy and new formats
+    const { image, captionType = "default", vibes, apiKey } = req.body;
     
     if (!image || !apiKey) {
       throw new Error("Missing required fields: image and apiKey");
@@ -61,7 +62,7 @@ module.exports = async function (context, req) {
       return;
     }
     
-    context.log(`▶ Received captionType: ${captionType}`);
+    context.log(`▶ Received captionType: ${captionType}, vibes:`, vibes);
 
     // Convert base64 to buffer
     let fileBuffer;
@@ -119,41 +120,8 @@ module.exports = async function (context, req) {
     const base64Image = resizedBuffer.toString("base64");
     const imageData = `data:image/jpeg;base64,${base64Image}`;
 
-function getSystemInstructions(ct) {
-  switch ((ct || "").toLowerCase()) {
-    case "funny":
-      return [
-        "You are a Gen-Z/30s “mood” curator. Given an image, write a snappy, playful caption (1–2 sentences) that makes people double-tap. Use exactly one emoji—bonus points for something ironic, tongue-in-cheek, or meme-adjacent. Avoid being too wordy; keep it scroll-stopping.",
-        "Example tone: “When coffee is life and mornings are not. ☕️”"
-      ].join(" ");
-
-    case "romantic":
-      return [
-        "You are a modern romantic poet who keeps it genuine. Given an image (solo or couple shot), craft a sweet but not cheesy caption (1–2 sentences) that captures the moment—think heartfelt but still light. Use exactly one emoji that feels warm (❤️, 🥰, or 🌹). Avoid clichés like “my other half”; focus on authentic feeling.",
-        "Example tone: “Lost in your eyes and found everywhere I look. ❤️”"
-      ].join(" ");
-
-    case "motivational":
-      return [
-        "You are a motivational speaker who speaks like a close friend. Given an image (gym selfie, sunrise landscape, or hustle shot), write an uplifting caption (1–2 sentences) that inspires action or positivity. Use exactly one emoji to convey energy (🔥, 💪, or ✨). Keep it concise—think “fuel for your morning scroll.”",
-        "Example tone: “Chase goals, not perfection. You got this. 💪”"
-      ].join(" ");
-
-    case "explain":
-      return [
-        "You are an ultra-visual explainer with a dash of personality. Given an image, describe what’s happening in 2–3 sentences—include context or background if it feels relevant (e.g., location, mood, color vibes). Write it so a friend scrolling Instagram would nod along, picturing the scene in their head. Skip generic phrases like “beautiful photo”; instead name the key details.",
-        "Example tone: “Golden hour by the beach—waves kissing my feet while the skyline glows pink. Perfect escape from the 9-to-5 chaos.”"
-      ].join(" ");
-
-    default:
-      return [
-        "You are a creative caption guru for Instagram. Given an image, craft a short, engaging caption (1–2 sentences) that fits today’s trending aesthetic—mix relatable commentary with a single emoji that enhances the vibe (😉, 🌟, or 🤳). Throw in one subtle hashtag if it feels natural (e.g., #WeekendVibes, #CityLife), but keep it minimal so it doesn’t look cluttered.",
-        "Example tone: “Sundays are for rooftop views and latte in hand. #WeekendVibes ☕️”"
-      ].join(" ");
-  }
-}
-
-    const instructions = getSystemInstructions(captionType);
+    // Generate instructions using new modular system
+    const instructions = generateInstructions(captionType, vibes);
     context.log("▶ System instructions:", instructions);
 
     const client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
