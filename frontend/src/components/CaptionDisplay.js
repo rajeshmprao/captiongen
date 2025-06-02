@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Copy, Check } from 'lucide-react';
 import './CaptionDisplay.css';
 
 function CaptionDisplay({ caption }) {
@@ -10,7 +12,6 @@ function CaptionDisplay({ caption }) {
       setCopyFeedback('Copied!');
       setTimeout(() => setCopyFeedback(''), 2000);
     } catch (err) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = caption;
       document.body.appendChild(textArea);
@@ -27,51 +28,55 @@ function CaptionDisplay({ caption }) {
     }
   };
 
-  const getCharacterInfo = () => {
-    const count = caption.length;
-    if (count <= 125) {
-      return { text: `${count} characters (perfect for Twitter)`, color: '#27ae60' };
-    } else if (count <= 280) {
-      return { text: `${count} characters (good for most platforms)`, color: '#f39c12' };
-    } else {
-      return { text: `${count} characters (might be too long)`, color: '#e74c3c' };
-    }
-  };
-
-  const characterInfo = getCharacterInfo();
 
   return (
-    <div className="caption-display">
-      <div className="caption-text">
-        {caption}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-4"
+    >
+      <div className="relative">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+        >
+          <p className="text-lg text-gray-900 leading-relaxed">{caption}</p>
+        </motion.div>
       </div>
       
-      <div className="caption-actions">
-        <div className="caption-info">
-          <div 
-            className="character-count" 
-            style={{ color: characterInfo.color }}
-          >
-            {characterInfo.text}
-          </div>
-        </div>
-        
-        <div className="caption-controls">
-          <span 
-            className={`copy-feedback ${copyFeedback ? 'show' : ''}`}
-          >
-            {copyFeedback}
-          </span>
-          <button 
-            className="copy-button"
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <AnimatePresence>
+            {copyFeedback && (
+              <motion.span
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className={`text-sm ${copyFeedback === 'Copied!' ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {copyFeedback}
+              </motion.span>
+            )}
+          </AnimatePresence>
+          
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={copyToClipboard}
-            title="Copy caption to clipboard"
+            className="flex items-center space-x-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-all text-sm font-medium"
           >
-            📋 Copy
-          </button>
+            {copyFeedback === 'Copied!' ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <Copy className="w-4 h-4" />
+            )}
+            <span>Copy</span>
+          </motion.button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

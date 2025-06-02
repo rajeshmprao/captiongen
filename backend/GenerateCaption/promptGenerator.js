@@ -1,5 +1,5 @@
 /**
- * Legacy system instructions for backward compatibility
+ * System instructions including new types for proper vibe support
  */
 function getSystemInstructions(captionType) {
   switch ((captionType || "").toLowerCase()) {
@@ -27,29 +27,29 @@ function getSystemInstructions(captionType) {
         `Example tone: "Golden hour by the beach—waves kissing my feet while the skyline glows pink. Perfect escape from the 9-to-5 chaos."`
       ].join(" ");
 
+    case "business":
+      return [
+        `You are a modern professional storyteller who speaks corporate but keeps it human. Given an image, craft a polished caption (1-2 sentences) that builds personal brand without sounding stiff. Think LinkedIn meets Instagram—professional credibility with personality. Use exactly one emoji that conveys success or growth (💼, 🚀, or ✨). Avoid corporate jargon; focus on authentic professional moments.`,
+        `Example tone: "Building something meaningful, one meeting at a time. 🚀"`
+      ].join(" ");
+
+    case "witty":
+      return [
+        `You are a sharp-witted social observer with impeccable timing. Given an image, write a cleverly sarcastic caption (1-2 sentences) that makes people think 'too real' while they double-tap. Master the art of dry humor—be sardonic but not mean, ironic but not bitter. Use exactly one emoji that adds to the sarcasm (🙃, 😅, or 🤷‍♀️). Think 'Twitter comedian meets Instagram reality.'`,
+        `Example tone: "Adulting is just saying 'I should probably eat something healthy' while ordering takeout. 🙃"`
+      ].join(" ");
+
+    case "artistic":
+      return [
+        `You are a contemporary poet who captures life's fleeting beauty in Instagram-worthy words. Given an image, craft a lyrical caption (1-2 sentences) that makes ordinary moments feel extraordinary. Think modern poetry meets visual storytelling—evoke emotion without being pretentious. Use exactly one emoji that enhances the mood (🌅, 📚, or 🎭). Aim for the kind of caption that gets screenshot and shared.`,
+        `Example tone: "Golden hour painting the city in dreams I forgot I had. 🌅"`
+      ].join(" ");
+
     default:
       return [
         `You are a creative caption guru for Instagram. Given an image, craft a short, engaging caption (1–2 sentences) that fits today's trending aesthetic—mix relatable commentary with a single emoji that enhances the vibe (😉, 🌟, or 🤳). Throw in one subtle hashtag if it feels natural (e.g., #WeekendVibes, #CityLife), but keep it minimal so it doesn't look cluttered.`,
         `Example tone: "Sundays are for rooftop views and latte in hand. #WeekendVibes ☕️"`
       ].join(" ");
-  }
-}
-
-/**
- * Map legacy caption types to vibe combinations
- */
-function mapCaptionTypeToVibes(captionType) {
-  switch ((captionType || "").toLowerCase()) {
-    case "funny":
-      return { humor: 80, energy: 60, formality: 10, romance: 10, sarcasm: 30, poeticism: 20 };
-    case "romantic":
-      return { humor: 20, energy: 40, formality: 30, romance: 80, sarcasm: 5, poeticism: 60 };
-    case "motivational":
-      return { humor: 30, energy: 90, formality: 60, romance: 20, sarcasm: 10, poeticism: 40 };
-    case "explain":
-      return { humor: 20, energy: 50, formality: 70, romance: 10, sarcasm: 15, poeticism: 50 };
-    default:
-      return { humor: 30, energy: 50, formality: 30, romance: 20, sarcasm: 15, poeticism: 30 };
   }
 }
 
@@ -108,7 +108,7 @@ function getContextualModifier(vibeType, value, dominantVibe) {
   if (!vibeModifiers) return null;
 
   // Find the appropriate threshold
-  const threshold = value >= 80 ? 80 : value >= 60 ? 60 : 40;
+  const threshold = value >= 80 ? 80 : value >= 60 ? 60 : value >= 40 ? 40 : 0;
   return vibeModifiers[threshold];
 }
 
@@ -123,9 +123,9 @@ function injectModifier(basePrompt, modifier, vibeType) {
     humor: /(\. Given an image)/,
     romance: /(who keeps it genuine)/,
     energy: /(close friend)/,
-    formality: /(caption guru)/,
-    sarcasm: /(mood curator)/,
-    poeticism: /(visual explainer)/
+    formality: /(professional storyteller)/,
+    sarcasm: /(social observer)/,
+    poeticism: /(contemporary poet)/
   };
 
   const injectionPoint = injectionPoints[vibeType];
@@ -148,14 +148,14 @@ function generateDynamicPrompt(vibes) {
   // Find dominant vibe
   const dominantVibe = getDominantVibe(validatedVibes);
   
-  // Map dominant vibe to legacy caption type for base template
+  // Map dominant vibe to appropriate caption type
   const vibeToType = {
     humor: 'funny',
     romance: 'romantic', 
     energy: 'motivational',
-    formality: 'explain',
-    sarcasm: 'funny',
-    poeticism: 'explain'
+    formality: 'business',
+    sarcasm: 'witty',
+    poeticism: 'artistic'
   };
   
   const baseType = vibeToType[dominantVibe] || 'default';
@@ -203,21 +203,15 @@ function validateVibes(vibes) {
 }
 
 /**
- * Main function to generate instructions - handles both legacy and new systems
+ * Main function to generate instructions - simplified to route correctly
  */
 function generateInstructions(captionType, vibes) {
-  // If vibes are provided and valid, use new system
+  // If vibes are provided and valid, use new vibe system
   if (vibes && Object.keys(vibes).length > 0) {
     return generateDynamicPrompt(vibes);
   }
   
-  // If captionType is provided, convert to vibes first (for consistency)
-  if (captionType && captionType !== 'default') {
-    const mappedVibes = mapCaptionTypeToVibes(captionType);
-    return generateDynamicPrompt(mappedVibes);
-  }
-  
-  // Fallback to legacy system for default
+  // For caption types, use legacy prompts directly (no vibe conversion)
   return getSystemInstructions(captionType);
 }
 
@@ -225,6 +219,5 @@ module.exports = {
   generateInstructions,
   generateDynamicPrompt,
   getSystemInstructions,
-  mapCaptionTypeToVibes,
   validateVibes
 };

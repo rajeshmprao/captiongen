@@ -6,7 +6,7 @@ const fetch = require('node-fetch');
 const API_URL = 'http://localhost:7071/api/GenerateCaption';
 const API_KEY = 'HKRqJXbJcFPPmO3vCjo4Ng==';
 const IMAGES_DIR = './images';
-const CAPTION_TYPES = ['funny', 'romantic', 'motivational', 'explain', 'default'];
+const CAPTION_TYPES = ['funny', 'romantic', 'motivational', 'explain', 'business', 'witty', 'artistic', 'default'];
 const OUTPUT_FILE = 'caption-results.json';
 
 // Colors for console output

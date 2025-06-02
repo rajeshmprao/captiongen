@@ -3,7 +3,8 @@ const Sharp = require("sharp");
 const { generateInstructions } = require("./promptGenerator");
 
 module.exports = async function (context, req) {
-  context.log("→ GenerateCaption was called");
+  const requestId = generateRequestId();
+  context.log("→ GenerateCaption was called", { requestId });
   
   // Add CORS headers to all responses
   const corsHeaders = {
@@ -22,9 +23,6 @@ module.exports = async function (context, req) {
     };
     return;
   }
-  
-  // Log headers for debugging
-  context.log("Request headers:", JSON.stringify(req.headers, null, 2));
 
   if (req.method !== "POST") {
     context.res = { 
@@ -50,10 +48,19 @@ module.exports = async function (context, req) {
       throw new Error("Missing required fields: image and apiKey");
     }
 
+    // Log user request details
+    context.log("CaptionRequest", {
+      requestId,
+      requestType: vibes && Object.keys(vibes).length > 0 ? "vibes" : "captionType",
+      captionType: captionType,
+      vibes: vibes ? JSON.stringify(vibes) : null,
+      timestamp: new Date().toISOString()
+    });
+
     // Shared-secret check
     const SHARED_SECRET = process.env["SHARED_SECRET"];
     if (apiKey !== SHARED_SECRET) {
-      context.log.warn("⛔ Unauthorized");
+      context.log.warn("⛔ Unauthorized", { requestId });
       context.res = { 
         status: 401, 
         headers: corsHeaders,
@@ -61,8 +68,6 @@ module.exports = async function (context, req) {
       };
       return;
     }
-    
-    context.log(`▶ Received captionType: ${captionType}, vibes:`, vibes);
 
     // Convert base64 to buffer
     let fileBuffer;
@@ -122,10 +127,18 @@ module.exports = async function (context, req) {
 
     // Generate instructions using new modular system
     const instructions = generateInstructions(captionType, vibes);
-    context.log("▶ System instructions:", instructions);
+    
+    // Log the final prompt sent to LLM
+    context.log("LLMPrompt", {
+      requestId,
+      promptLength: instructions.length,
+      imageSize: resizedBuffer.length
+    });
 
     const client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
     context.log("▶ Calling OpenAI...");
+    
+    const llmStartTime = Date.now();
     
     // Use the correct OpenAI API format for vision with gpt-4o
     const aiResponse = await client.chat.completions.create({
@@ -152,7 +165,17 @@ module.exports = async function (context, req) {
       temperature: 0.8
     });
 
+    const llmDuration = Date.now() - llmStartTime;
     const caption = aiResponse.choices[0]?.message?.content?.trim() || "Could not generate caption";
+    
+    // Log LLM response metrics
+    context.log("LLMResponse", {
+      requestId,
+      tokensUsed: aiResponse.usage?.total_tokens || 0,
+      responseTime: llmDuration,
+      success: true
+    });
+
     context.log("▶ Generated caption:", caption);
 
     context.res = {
@@ -165,7 +188,14 @@ module.exports = async function (context, req) {
     };
   } catch (err) {
     context.log.error("❗ Error in GenerateCaption:", err);
-    context.log.error("Error stack:", err.stack);
+    
+    // Log error with request context
+    context.log("LLMResponse", {
+      requestId,
+      success: false,
+      error: err.message
+    });
+    
     context.res = { 
       status: 500,
       headers: corsHeaders,
@@ -176,3 +206,7 @@ module.exports = async function (context, req) {
     };
   }
 };
+
+function generateRequestId() {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
