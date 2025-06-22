@@ -20,17 +20,27 @@ A full-stack serverless application that generates AI-powered captions for image
 - **Multi-format Support**: JPEG, PNG, GIF, WebP
 - **Smart Image Processing**: Automatic resizing and optimization with Sharp
 - **Dual API Systems**: Support for both binary and JSON payloads
+- **Carousel/Photo Dump Support**: Multi-image caption generation with cross-image analysis
 - **Comprehensive Testing**: Automated test suite with visual reports
 - **CORS Support**: Frontend-backend integration ready
+
+## 📖 API Documentation
+
+- **[Carousel API Integration Guide](./CAROUSEL_API_DOCUMENTATION.md)**: Complete documentation for integrating the carousel caption API with Flutter/mobile apps
 
 ## 📁 Project Structure
 
 ```
 captiongen-func/
 ├── backend/                    # Azure Functions backend
-│   ├── GenerateCaption/       # Main function
+│   ├── GenerateCaption/       # Single image function
 │   │   ├── index.js          # Function logic
 │   │   ├── promptGenerator.js # AI prompt system
+│   │   ├── telemetry.js      # Logging and metrics
+│   │   └── function.json     # Function configuration
+│   ├── GenerateCarouselCaption/ # Multi-image function
+│   │   ├── index.js          # Carousel function logic
+│   │   ├── carouselPromptGenerator.js # Photo dump AI prompts
 │   │   └── function.json     # Function configuration
 │   ├── package.json
 │   └── local.settings.json   # Local config (create this)
@@ -118,7 +128,9 @@ The backend runs on `http://localhost:7071` and frontend on `http://localhost:30
 
 ### API Usage
 
-#### Legacy System (Binary Upload)
+#### Single Image Caption Generation
+
+##### Legacy System (Binary Upload)
 ```bash
 curl -X POST "http://localhost:7071/api/GenerateCaption" \
   -H "x-api-key: your-shared-secret" \
@@ -127,7 +139,7 @@ curl -X POST "http://localhost:7071/api/GenerateCaption" \
   --data-binary @your-image.jpg
 ```
 
-#### New System (JSON with Vibes)
+##### New System (JSON with Vibes)
 ```bash
 curl -X POST "http://localhost:7071/api/GenerateCaption" \
   -H "Content-Type: application/json" \
@@ -145,12 +157,71 @@ curl -X POST "http://localhost:7071/api/GenerateCaption" \
   }'
 ```
 
-#### Response Format
+##### Single Image Response Format
 ```json
 {
   "caption": "Your AI-generated caption here! 😄"
 }
 ```
+
+#### Carousel/Photo Dump Caption Generation
+
+##### Carousel System (JSON Only)
+```bash
+curl -X POST "http://localhost:7071/api/GenerateCarouselCaption" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "images": [
+      "base64-encoded-image-1",
+      "base64-encoded-image-2",
+      "base64-encoded-image-3"
+    ],
+    "apiKey": "your-shared-secret",
+    "captionType": "funny"
+  }'
+```
+
+##### Carousel with Custom Vibes
+```bash
+curl -X POST "http://localhost:7071/api/GenerateCarouselCaption" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "images": [
+      "base64-encoded-image-1",
+      "base64-encoded-image-2"
+    ],
+    "apiKey": "your-shared-secret",
+    "vibes": {
+      "humor": 70,
+      "energy": 90,
+      "formality": 10,
+      "sarcasm": 30,
+      "romance": 5,
+      "poeticism": 15
+    }
+  }'
+```
+
+##### Carousel Response Format
+```json
+{
+  "masterCaption": "Cohesive narrative for the entire photo dump",
+  "individualCaptions": [
+    "Specific caption for first image",
+    "Specific caption for second image",
+    "Specific caption for third image"
+  ],
+  "imageCount": 3,
+  "analysisQuality": "structured"
+}
+```
+
+##### Carousel Constraints
+- **Image Count**: 2-3 images required (strict validation)
+- **Format**: Base64 encoded strings (with or without data URI prefix)
+- **Supported Types**: JPEG, PNG, GIF, WebP
+- **Processing**: Auto-resized to 768x768 at 85% quality
+- **Authentication**: Same shared secret as single image API
 
 ## 🧪 Testing
 
@@ -222,16 +293,18 @@ cd frontend
 npm run deploy
 ```
 
-### Update Frontend API URL
+### Update Frontend API URLs
 
-For production, update `frontend/src/App.js` or set environment variable:
+For production, update environment variables or defaults in `frontend/src/App.js`:
 
 ```bash
-# Option 1: Set environment variable
-echo "REACT_APP_API_URL=https://captiongen-func-xyz.azurewebsites.net/api/GenerateCaption" > frontend/.env
+# Set both API URLs in environment file
+echo "REACT_APP_API_URL=https://your-function-app.azurewebsites.net/api/GenerateCaption" > frontend/.env.production
+echo "REACT_APP_CAROUSEL_API_URL=https://your-function-app.azurewebsites.net/api/GenerateCarouselCaption" >> frontend/.env.production
 
-# Option 2: Update the default in App.js
+# Or update defaults in App.js
 const API_URL = process.env.REACT_APP_API_URL || 'https://your-function-app.azurewebsites.net/api/GenerateCaption';
+const CAROUSEL_API_URL = process.env.REACT_APP_CAROUSEL_API_URL || 'https://your-function-app.azurewebsites.net/api/GenerateCarouselCaption';
 ```
 
 ## 🔧 Development Workflow

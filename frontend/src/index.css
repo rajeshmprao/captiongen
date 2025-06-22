@@ -29,6 +29,19 @@
 }
 
 @layer utilities {
+  /* Standardized aspect ratios for image previews */
+  .aspect-thumbnail {
+    aspect-ratio: 1 / 1; /* 1:1 for thumbnails */
+  }
+  
+  .aspect-standard {
+    aspect-ratio: 4 / 3; /* 4:3 for standard previews */
+  }
+  
+  .aspect-landscape {
+    aspect-ratio: 16 / 9; /* 16:9 for landscape/hero images */
+  }
+
   /* Reduced motion support */
   @media (prefers-reduced-motion: reduce) {
     * {

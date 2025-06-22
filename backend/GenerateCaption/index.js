@@ -1,9 +1,11 @@
 const OpenAI = require("openai");
 const Sharp = require("sharp");
 const { generateInstructions } = require("./promptGenerator");
+const telemetry = require("./telemetry");
 
 module.exports = async function (context, req) {
   const requestId = generateRequestId();
+  const requestStartTime = Date.now();
   context.log("→ GenerateCaption was called", { requestId });
   
   // Add CORS headers to all responses
@@ -40,34 +42,34 @@ module.exports = async function (context, req) {
     }
 
     context.log("▶ Processing JSON payload");
-    
-    // Parse JSON body - support both legacy and new formats
+      // Parse JSON body - support both legacy and new formats
     const { image, captionType = "default", vibes, apiKey } = req.body;
     
     if (!image || !apiKey) {
       throw new Error("Missing required fields: image and apiKey");
     }
 
+    // Generate user identifier for telemetry (used throughout the function)
+    const userId = telemetry.getUserId(req);
+
     // Log user request details
-    context.log("CaptionRequest", {
+    telemetry.logRequestStart(context, {
       requestId,
+      userId,
       requestType: vibes && Object.keys(vibes).length > 0 ? "vibes" : "captionType",
       captionType: captionType,
       vibes: vibes ? JSON.stringify(vibes) : null,
       timestamp: new Date().toISOString()
-    });
-
-    // Shared-secret check
-    const SHARED_SECRET = process.env["SHARED_SECRET"];
-    if (apiKey !== SHARED_SECRET) {
+    });// Shared-secret check
+    const SHARED_SECRET = process.env["SHARED_SECRET"];    if (apiKey !== SHARED_SECRET) {
+      telemetry.logAuthFailure(context, { requestId, userId });
       context.log.warn("⛔ Unauthorized", { requestId });
       context.res = { 
         status: 401, 
         headers: corsHeaders,
         body: { error: "Unauthorized" } 
       };
-      return;
-    }
+      return;    }
 
     // Convert base64 to buffer
     let fileBuffer;
@@ -83,9 +85,7 @@ module.exports = async function (context, req) {
     // Validate the buffer before processing
     if (!fileBuffer || fileBuffer.length === 0) {
       throw new Error("Image buffer is empty");
-    }
-
-    // Try to detect the actual image format
+    }    // Try to detect the actual image format
     let imageFormat = 'jpeg';
     if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) {
       imageFormat = 'png';
@@ -96,6 +96,8 @@ module.exports = async function (context, req) {
     } else {
       context.log(`⚠ Unknown image format. First bytes: ${fileBuffer.slice(0, 4).toString('hex')}`);
     }
+
+    const originalSize = fileBuffer.length;
 
     // Convert image to data URI
     let resizedBuffer;
@@ -119,18 +121,24 @@ module.exports = async function (context, req) {
       } else {
         throw sharpError;
       }
-    }
-
-    // Compute Base64
+    }    // Compute Base64
     const base64Image = resizedBuffer.toString("base64");
     const imageData = `data:image/jpeg;base64,${base64Image}`;
 
-    // Generate instructions using new modular system
+    // Log image processing telemetry
+    telemetry.logImageProcessing(context, {
+      requestId,
+      userId,
+      originalFormat: imageFormat,
+      originalSize: originalSize,
+      processedSize: resizedBuffer.length
+    });    // Generate instructions using new modular system
     const instructions = generateInstructions(captionType, vibes);
     
     // Log the final prompt sent to LLM
-    context.log("LLMPrompt", {
+    telemetry.logLLMRequest(context, {
       requestId,
+      userId,
       promptLength: instructions.length,
       imageSize: resizedBuffer.length
     });
@@ -163,20 +171,26 @@ module.exports = async function (context, req) {
       ],
       max_tokens: 100,
       temperature: 0.8
-    });
-
-    const llmDuration = Date.now() - llmStartTime;
+    });    const llmDuration = Date.now() - llmStartTime;
     const caption = aiResponse.choices[0]?.message?.content?.trim() || "Could not generate caption";
     
     // Log LLM response metrics
-    context.log("LLMResponse", {
+    telemetry.logLLMResponse(context, {
       requestId,
+      userId,
       tokensUsed: aiResponse.usage?.total_tokens || 0,
       responseTime: llmDuration,
       success: true
-    });
+    });    context.log("▶ Generated caption:", caption);
 
-    context.log("▶ Generated caption:", caption);
+    // Log successful request completion
+    const totalDuration = Date.now() - requestStartTime;
+    telemetry.logRequestComplete(context, {
+      requestId,
+      userId,
+      totalDuration,
+      captionLength: caption.length
+    });
 
     context.res = {
       status: 200,
@@ -187,13 +201,20 @@ module.exports = async function (context, req) {
       body: { caption }
     };
   } catch (err) {
-    context.log.error("❗ Error in GenerateCaption:", err);
-    
     // Log error with request context
-    context.log("LLMResponse", {
+    telemetry.logError(context, {
       requestId,
+      userId: userId || 'unknown',
+      error: err.message,
+      errorType: 'CaptionGenerationError'
+    });
+    
+    telemetry.logLLMResponse(context, {
+      requestId,
+      userId: userId || 'unknown',
       success: false,
-      error: err.message
+      error: err.message,
+      responseTime: 0
     });
     
     context.res = { 

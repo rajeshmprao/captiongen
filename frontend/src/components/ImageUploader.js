@@ -1,28 +1,49 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, ImagePlus } from 'lucide-react';
+import { ImagePlus, Images, X } from 'lucide-react';
 import './ImageUploader.css';
 
-function ImageUploader({ onImageSelect }) {
+function ImageUploader({ onImageSelect, onMultiImageSelect, onImageRemove, isCarouselMode = false, imagePreviews = [] }) {
   const fileInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      onImageSelect(file);
+    const files = Array.from(e.target.files);
+    
+    if (isCarouselMode) {
+      const imageFiles = files.filter(file => file.type.startsWith('image/'));
+      if (imageFiles.length >= 2 && imageFiles.length <= 3) {
+        onMultiImageSelect(imageFiles);
+      } else {
+        alert('Please select 2-3 images for carousel mode');
+      }
+    } else {
+      const file = files[0];
+      if (file && file.type.startsWith('image/')) {
+        onImageSelect(file);
+      }
     }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      onImageSelect(file);
+    const files = Array.from(e.dataTransfer.files);
+    
+    if (isCarouselMode) {
+      const imageFiles = files.filter(file => file.type.startsWith('image/'));
+      if (imageFiles.length >= 2 && imageFiles.length <= 3) {
+        onMultiImageSelect(imageFiles);
+      } else {
+        alert('Please drop 2-3 images for carousel mode');
+      }
+    } else {
+      const file = files[0];
+      if (file && file.type.startsWith('image/')) {
+        onImageSelect(file);
+      }
     }
   };
-
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -32,6 +53,60 @@ function ImageUploader({ onImageSelect }) {
     e.preventDefault();
     setIsDragOver(false);
   };
+  const removeImage = (index) => {
+    if (onImageRemove) {
+      onImageRemove(index);
+    }
+  };
+
+  if (isCarouselMode && imagePreviews.length > 0) {
+    // Show carousel preview mode
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {imagePreviews.map((preview, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative group"            >              <div className="w-full aspect-standard bg-gray-100">
+                <img 
+                  src={preview} 
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-full object-contain rounded-lg shadow-md"
+                />
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeImage(index);
+                }}
+                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </motion.button>
+            </motion.div>
+          ))}
+        </div>
+        <button
+          onClick={() => fileInputRef.current.click()}
+          className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary-300 hover:text-primary-600 transition-all"
+        >
+          Change Images (2-3 images)
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -54,6 +129,7 @@ function ImageUploader({ onImageSelect }) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple={isCarouselMode}
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -66,24 +142,27 @@ function ImageUploader({ onImageSelect }) {
             isDragOver ? 'text-primary-500' : 'text-gray-400 group-hover:text-primary-400'
           }`}
         >
-          <Upload className="w-12 h-12 mx-auto mb-2" />
-          <ImagePlus className="w-8 h-8 mx-auto" />
+          {isCarouselMode ? <Images className="w-12 h-12" /> : <ImagePlus className="w-12 h-12" />}
         </motion.div>
         
-        <motion.p 
-          className={`text-lg font-medium transition-colors ${
-            isDragOver ? 'text-primary-700' : 'text-gray-700 group-hover:text-primary-600'
-          }`}
-        >
-          Drop an image here or click to select
-        </motion.p>
+        <h3 className={`text-lg font-semibold mb-2 transition-colors ${
+          isDragOver ? 'text-primary-600' : 'text-gray-700 group-hover:text-primary-600'
+        }`}>
+          {isCarouselMode ? 'Upload 2-3 Images for Carousel' : 'Upload an Image'}
+        </h3>
         
-        <p className="text-sm text-gray-500 mt-2">
-          Supports: JPG, PNG, GIF, WebP
+        <p className="text-gray-500 text-sm">
+          {isCarouselMode 
+            ? 'Drag and drop 2-3 images here, or click to browse'
+            : 'Drag and drop an image here, or click to browse'
+          }
+        </p>
+        
+        <p className="text-xs text-gray-400 mt-2">
+          Supports JPEG, PNG, GIF, WebP
         </p>
       </div>
-    </motion.div>
-  );
+    </motion.div>  );
 }
 
 export default ImageUploader;
