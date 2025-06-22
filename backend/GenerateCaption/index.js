@@ -6,7 +6,7 @@ const telemetry = require("./telemetry");
 module.exports = async function (context, req) {
   const requestId = generateRequestId();
   const requestStartTime = Date.now();
-  context.log("→ GenerateCaption was called", { requestId });
+  context.log.info({ requestId }, "GenerateCaption function invoked");
   
   // Add CORS headers to all responses
   const corsHeaders = {
@@ -41,7 +41,7 @@ module.exports = async function (context, req) {
       throw new Error("Content-Type must be application/json");
     }
 
-    context.log("▶ Processing JSON payload");
+    context.log.info({}, "Processing JSON payload");
       // Parse JSON body - support both legacy and new formats
     const { image, captionType = "default", vibes, apiKey } = req.body;
     
@@ -63,7 +63,7 @@ module.exports = async function (context, req) {
     });// Shared-secret check
     const SHARED_SECRET = process.env["SHARED_SECRET"];    if (apiKey !== SHARED_SECRET) {
       telemetry.logAuthFailure(context, { requestId, userId });
-      context.log.warn("⛔ Unauthorized", { requestId });
+      context.log.warn({ requestId }, "Authorization failed");
       context.res = { 
         status: 401, 
         headers: corsHeaders,
@@ -77,7 +77,7 @@ module.exports = async function (context, req) {
       // Remove data URL prefix if present (data:image/jpeg;base64,)
       const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '');
       fileBuffer = Buffer.from(base64Data, 'base64');
-      context.log(`▶ Converted base64 to buffer (bytes: ${fileBuffer.length})`);
+      context.log.info({ bufferSize: fileBuffer.length }, "Converted base64 to buffer");
     } catch (base64Error) {
       throw new Error("Invalid base64 image data");
     }
@@ -89,12 +89,12 @@ module.exports = async function (context, req) {
     let imageFormat = 'jpeg';
     if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) {
       imageFormat = 'png';
-      context.log("▶ Detected PNG format");
+      context.log.info({}, "Detected PNG format");
     } else if (fileBuffer[0] === 0xFF && fileBuffer[1] === 0xD8) {
       imageFormat = 'jpeg';
-      context.log("▶ Detected JPEG format");
+      context.log.info({}, "Detected JPEG format");
     } else {
-      context.log(`⚠ Unknown image format. First bytes: ${fileBuffer.slice(0, 4).toString('hex')}`);
+      context.log.warn({ firstBytes: fileBuffer.slice(0, 4).toString('hex') }, "Unknown image format detected");
     }
 
     const originalSize = fileBuffer.length;
@@ -104,7 +104,11 @@ module.exports = async function (context, req) {
     try {
       // First, try to just read the metadata to see if Sharp can handle the file
       const metadata = await Sharp(fileBuffer).metadata();
-      context.log(`▶ Image metadata: format=${metadata.format}, width=${metadata.width}, height=${metadata.height}`);
+      context.log.info({ 
+        format: metadata.format, 
+        width: metadata.width, 
+        height: metadata.height 
+      }, "Image metadata extracted");
       
       // Now try to process it
       resizedBuffer = await Sharp(fileBuffer)
@@ -112,11 +116,11 @@ module.exports = async function (context, req) {
         .jpeg({ quality: 80 })
         .toBuffer();
     } catch (sharpError) {
-      context.log.error("Sharp processing error:", sharpError);
+      context.log.error({ error: sharpError.message }, "Sharp processing failed");
       
       // Try a fallback approach - just use the original buffer if it's not too large
       if (fileBuffer.length < 5 * 1024 * 1024) { // 5MB limit
-        context.log("▶ Using original image without resizing");
+        context.log.info({}, "Using original image without resizing");
         resizedBuffer = fileBuffer;
       } else {
         throw sharpError;
@@ -144,7 +148,7 @@ module.exports = async function (context, req) {
     });
 
     const client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
-    context.log("▶ Calling OpenAI...");
+    context.log.info({}, "Calling OpenAI API");
     
     const llmStartTime = Date.now();
     
@@ -181,7 +185,7 @@ module.exports = async function (context, req) {
       tokensUsed: aiResponse.usage?.total_tokens || 0,
       responseTime: llmDuration,
       success: true
-    });    context.log("▶ Generated caption:", caption);
+    });    context.log.info({ captionLength: caption.length }, "Caption generated successfully");
 
     // Log successful request completion
     const totalDuration = Date.now() - requestStartTime;
