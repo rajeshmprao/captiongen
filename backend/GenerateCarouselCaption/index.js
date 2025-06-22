@@ -10,7 +10,7 @@ function generateRequestId() {
 module.exports = async function (context, req) {
   const requestId = generateRequestId();
   const requestStartTime = Date.now();
-  context.log("→ GenerateCarouselCaption was called", { requestId });
+  context.log.info({ requestId }, "GenerateCarouselCaption function invoked");
   
   // Add CORS headers to all responses
   const corsHeaders = {
@@ -45,7 +45,7 @@ module.exports = async function (context, req) {
       throw new Error("Content-Type must be application/json");
     }
 
-    context.log("▶ Processing JSON payload for carousel");
+    context.log.info({}, "Processing JSON payload for carousel");
     
     // Parse JSON body - expect images array instead of single image
     const { images, captionType = "default", vibes, apiKey } = req.body;
@@ -64,7 +64,7 @@ module.exports = async function (context, req) {
     if (apiKey !== SHARED_SECRET) {
       const userId = telemetry.getUserId(req);
       telemetry.logAuthFailure(context, { requestId, userId });
-      context.log.warn("⛔ Unauthorized", { requestId });
+      context.log.warn({ requestId }, "Authorization failed");
       context.res = { 
         status: 401, 
         headers: corsHeaders,
@@ -86,7 +86,7 @@ module.exports = async function (context, req) {
       timestamp: new Date().toISOString()
     });
 
-    context.log(`▶ Processing ${images.length} images for carousel`);
+    context.log.info({ imageCount: images.length }, "Processing images for carousel");
 
     // Process all images
     const processedImages = [];
@@ -102,7 +102,10 @@ module.exports = async function (context, req) {
         // Remove data URL prefix if present (data:image/jpeg;base64,)
         const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '');
         fileBuffer = Buffer.from(base64Data, 'base64');
-        context.log(`▶ Image ${i + 1}: Converted base64 to buffer (bytes: ${fileBuffer.length})`);
+        context.log.info({ 
+          imageIndex: i + 1, 
+          bufferSize: fileBuffer.length 
+        }, "Converted base64 to buffer");
         totalOriginalSize += fileBuffer.length;
       } catch (base64Error) {
         throw new Error(`Invalid base64 image data for image ${i + 1}`);
@@ -117,14 +120,17 @@ module.exports = async function (context, req) {
       let imageFormat = 'jpeg';
       if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) {
         imageFormat = 'png';
-        context.log(`▶ Image ${i + 1}: Detected PNG format`);
+        context.log.info({ imageIndex: i + 1 }, "Detected PNG format");
       } else if (fileBuffer[0] === 0xFF && fileBuffer[1] === 0xD8) {
         imageFormat = 'jpeg';
-        context.log(`▶ Image ${i + 1}: Detected JPEG format`);
+        context.log.info({ imageIndex: i + 1 }, "Detected JPEG format");
       } else {
-        context.log(`⚠ Image ${i + 1}: Unknown format. First bytes: ${fileBuffer.slice(0, 4).toString('hex')}`);
+        context.log.warn({ 
+          imageIndex: i + 1, 
+          firstBytes: fileBuffer.slice(0, 4).toString('hex') 
+        }, "Unknown image format detected");
       }      // Process with Sharp (optimized for photo dump analysis)
-      context.log(`▶ Image ${i + 1}: Processing with Sharp...`);
+      context.log.info({ imageIndex: i + 1 }, "Processing image with Sharp");
       const resizedBuffer = await Sharp(fileBuffer)
         .resize(768, 768, { // Increased resolution for better photo dump context
           fit: 'inside', 
@@ -138,7 +144,11 @@ module.exports = async function (context, req) {
         .toBuffer();
 
       totalProcessedSize += resizedBuffer.length;
-      context.log(`▶ Image ${i + 1}: Processed (${fileBuffer.length} → ${resizedBuffer.length} bytes)`);
+      context.log.info({ 
+        imageIndex: i + 1, 
+        originalSize: fileBuffer.length, 
+        processedSize: resizedBuffer.length 
+      }, "Image processing completed");
 
       // Convert to base64 for OpenAI
       const imageData = `data:image/jpeg;base64,${resizedBuffer.toString('base64')}`;
@@ -166,7 +176,7 @@ module.exports = async function (context, req) {
     });
 
     const client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
-    context.log("▶ Calling OpenAI for carousel generation...");
+    context.log.info({}, "Calling OpenAI for carousel generation");
     
     const llmStartTime = Date.now();
       // Create messages array with all images - use higher detail for better photo dump analysis
@@ -198,7 +208,7 @@ module.exports = async function (context, req) {
     });
 
     const llmEndTime = Date.now();
-    context.log(`▶ OpenAI response received (${llmEndTime - llmStartTime}ms)`);
+    context.log.info({ responseTime: llmEndTime - llmStartTime }, "OpenAI response received");
 
     if (!aiResponse.choices || aiResponse.choices.length === 0) {
       throw new Error("No response from AI service");
@@ -209,12 +219,11 @@ module.exports = async function (context, req) {
       throw new Error("Empty response from AI service");
     }
 
-    context.log("▶ Parsing carousel response...");
+    context.log.info({}, "Parsing carousel response");
     
     // Parse the structured response into master + individual captions
     const carouselResult = parseCarouselResponse(rawCaption, images.length);    // Log successful completion with enhanced analysis metrics
-    const totalTime = Date.now() - requestStartTime;
-    context.log(`✅ Enhanced carousel caption generated successfully (${totalTime}ms total)`, {
+    const totalTime = Date.now() - requestStartTime;    context.log.info({
       requestId,
       userId,
       imageCount: images.length,
@@ -223,7 +232,7 @@ module.exports = async function (context, req) {
       analysisQuality: carouselResult.analysisQuality || 'structured',
       masterCaptionLength: carouselResult.masterCaption.length,
       avgIndividualLength: Math.round(carouselResult.individualCaptions.reduce((acc, cap) => acc + cap.length, 0) / carouselResult.individualCaptions.length)
-    });
+    }, "Enhanced carousel caption generated successfully");
 
     context.res = {
       status: 200,
@@ -235,13 +244,12 @@ module.exports = async function (context, req) {
     };
 
   } catch (error) {
-    const userId = telemetry.getUserId(req);
-    context.log.error("❌ Error in GenerateCarouselCaption", {
+    const userId = telemetry.getUserId(req);    context.log.error({
       requestId,
       userId,
       error: error.message,
       stack: error.stack
-    });
+    }, "Error in GenerateCarouselCaption");
 
     const totalTime = Date.now() - requestStartTime;
     

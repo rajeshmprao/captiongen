@@ -11,71 +11,92 @@ function getUserId(req) {
 }
 
 function logRequestStart(context, data) {
-  context.log('CaptionRequest', {
-    requestId: data.requestId,
-    userId: data.userId,
-    requestType: data.requestType,
-    captionType: data.captionType,
-    vibes: data.vibes,
-    timestamp: data.timestamp
-  });
+  context.log.info(
+    {
+      requestId: data.requestId,
+      userId: data.userId,
+      requestType: data.requestType,
+      captionType: data.captionType,
+      vibes: data.vibes,
+      timestamp: data.timestamp
+    },
+    'Caption request started'
+  );
 }
 
 function logAuthFailure(context, data) {
-  context.log.warn('AuthFailure', {
-    requestId: data.requestId,
-    userId: data.userId,
-    timestamp: new Date().toISOString()
-  });
+  context.log.warn(
+    {
+      requestId: data.requestId,
+      userId: data.userId,
+      timestamp: new Date().toISOString()
+    },
+    'Authentication failed'
+  );
 }
 
 function logImageProcessing(context, data) {
-  context.log('ImageProcessing', {
-    requestId: data.requestId,
-    userId: data.userId,
-    originalFormat: data.originalFormat,
-    originalSize: data.originalSize,
-    processedSize: data.processedSize
-  });
+  context.log.info(
+    {
+      requestId: data.requestId,
+      userId: data.userId,
+      originalFormat: data.originalFormat,
+      originalSize: data.originalSize,
+      processedSize: data.processedSize
+    },
+    'Image processing completed'
+  );
 }
 
 function logLLMRequest(context, data) {
-  context.log('LLMRequest', {
-    requestId: data.requestId,
-    userId: data.userId,
-    promptLength: data.promptLength,
-    imageSize: data.imageSize
-  });
+  context.log.info(
+    {
+      requestId: data.requestId,
+      userId: data.userId,
+      promptLength: data.promptLength,
+      imageSize: data.imageSize
+    },
+    'LLM request initiated'
+  );
 }
 
 function logLLMResponse(context, data) {
-  context.log('LLMResponse', {
-    requestId: data.requestId,
-    userId: data.userId,
-    tokensUsed: data.tokensUsed || 0,
-    responseTime: data.responseTime,
-    success: data.success,
-    error: data.error
-  });
+  context.log.info(
+    {
+      requestId: data.requestId,
+      userId: data.userId,
+      tokensUsed: data.tokensUsed || 0,
+      responseTime: data.responseTime,
+      success: data.success,
+      error: data.error
+    },
+    'LLM response received'
+  );
 }
 
 function logRequestComplete(context, data) {
-  context.log('RequestComplete', {
-    requestId: data.requestId,
-    userId: data.userId,
-    totalDuration: data.totalDuration,
-    captionLength: data.captionLength,
-    success: true
-  });
+  context.log.info(
+    {
+      requestId: data.requestId,
+      userId: data.userId,
+      totalDuration: data.totalDuration,
+      captionLength: data.captionLength,
+      success: true
+    },
+    'Caption request completed successfully'
+  );
 }
 
 function logError(context, data) {
-  context.log.error('CaptionGenerationError', {
-    requestId: data.requestId,
-    userId: data.userId,
-    error: data.error,
-    errorType: data.errorType || 'UnknownError'
-  });
+  context.log.error(
+    {
+      requestId: data.requestId,
+      userId: data.userId,
+      error: data.error,
+      errorType: data.errorType || 'UnknownError'
+    },
+    'Caption generation failed'
+  );
 }
 
 module.exports = {

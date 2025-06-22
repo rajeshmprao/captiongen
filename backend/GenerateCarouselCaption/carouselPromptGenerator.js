@@ -30,6 +30,8 @@ ADVANCED FEATURES:
 - If images capture an event: Reference the experience/memory
 - If images have consistent mood: Amplify that emotional tone
 
+CRITICAL: Return ONLY plain text with the exact prefix format. No JSON, XML, HTML, or Markdown formatting.
+
 Format your response EXACTLY as:
 MASTER: [sophisticated photo dump caption that captures the essence of the complete visual story]`;
 }
@@ -65,10 +67,11 @@ CAPTION CRAFTING:
 - Make each caption feel intentional and curated
 - Ensure captions complement rather than repeat each other
 
+CRITICAL: Use ONLY the specified INDIVIDUAL_X: prefixes. No JSON, XML, HTML, or Markdown formatting.
+
 Format your response EXACTLY as:
 INDIVIDUAL_1: [specific, detail-rich caption highlighting unique aspects of first image]
-INDIVIDUAL_2: [specific, detail-rich caption highlighting unique aspects of second image]${imageCount >= 3 ? '\nINDIVIDUAL_3: [specific, detail-rich caption highlighting unique aspects of third image]' : ''}`;
-}
+INDIVIDUAL_2: [specific, detail-rich caption highlighting unique aspects of second image]${imageCount >= 3 ? '\nINDIVIDUAL_3: [specific, detail-rich caption highlighting unique aspects of third image]' : ''}`;}
 
 /**
  * Enhanced parsing of structured response with intelligent fallback handling
@@ -211,11 +214,26 @@ ENHANCED FEATURES:
 - **Vibe Matching**: Ensure all captions match the overall energy and aesthetic
 - **Social Optimization**: Make captions that encourage engagement and storytelling
 
+CRITICAL FORMAT REQUIREMENTS:
+⚠️ FOLLOW THIS EXACT STRUCTURE - NO DEVIATIONS ALLOWED ⚠️
+- Use ONLY the specified prefixes: "MASTER:" and "INDIVIDUAL_X:"
+- Do NOT use JSON, XML, HTML, Markdown, or any other formatting
+- Do NOT add extra headers, sections, or explanatory text
+- Do NOT use asterisks (*), underscores (_), backticks (\`), or markup syntax
+- Each caption should be plain text on a single line after its prefix
+- No bullet points, numbered lists, or multiple paragraphs per caption
+
+FORBIDDEN FORMATS:
+❌ {"master": "caption"} or any JSON structure
+❌ **MASTER:** or *MASTER:* (no bold/italic formatting)
+❌ # MASTER or ## INDIVIDUAL (no headers)
+❌ - MASTER: or 1. INDIVIDUAL: (no list formatting)
+❌ Additional explanatory text before or after the format
+
 Format your response EXACTLY as:
 MASTER: [cohesive narrative capturing the complete photo dump story]
 INDIVIDUAL_1: [specific caption highlighting unique aspects of first image]
-INDIVIDUAL_2: [specific caption highlighting unique aspects of second image]${imageCount >= 3 ? '\nINDIVIDUAL_3: [specific caption highlighting unique aspects of third image]' : ''}`;
-}
+INDIVIDUAL_2: [specific caption highlighting unique aspects of second image]${imageCount >= 3 ? '\nINDIVIDUAL_3: [specific caption highlighting unique aspects of third image]' : ''}`;}
 
 /**
  * Generate advanced photo dump analysis prompt with context detection
