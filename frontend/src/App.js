@@ -103,9 +103,20 @@ function App() {
     applyTweak(tweakType);
     setTimeout(() => generateCaption(), 100);
   };
-  // Check if generate button should be disabled
-  const isAuthenticated = React.useMemo(() => {
-    return apiService.authService.isAuthenticated() || false;
+
+  // Track authentication state with proper updates
+  const [isAuthenticated, setIsAuthenticated] = React.useState(() => {
+    return apiService.authService.isAuthenticated();
+  });
+
+  React.useEffect(() => {
+    // Listen for auth changes
+    const handleAuthChange = (event) => {
+      setIsAuthenticated(!!event.detail.user);
+    };
+
+    window.addEventListener('auth-changed', handleAuthChange);
+    return () => window.removeEventListener('auth-changed', handleAuthChange);
   }, []);
   
   const isGenerateDisabled = (isCarouselMode ? images.length === 0 : !image) || loading || (!isAuthenticated && !apiKey.trim());
