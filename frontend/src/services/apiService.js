@@ -9,6 +9,7 @@ import {
 
 const API_URL = process.env.REACT_APP_API_URL;
 const CAROUSEL_API_URL = process.env.REACT_APP_CAROUSEL_API_URL;
+const USER_AUTH_URL = process.env.REACT_APP_USER_AUTH_URL;
 
 class AuthService {
   constructor() {
@@ -52,7 +53,7 @@ class AuthService {
   async exchangeFirebaseToken(firebaseIdToken) {
     try {
       // Exchange Firebase ID token for our JWT
-      const authResponse = await fetch(`${API_URL.replace('/GenerateCaption', '/UserAuth')}`, {
+      const authResponse = await fetch(USER_AUTH_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
