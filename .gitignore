@@ -42,15 +42,19 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Azurite artifacts
-__blobstorage__
-__queuestorage__
-__azurite_db*__.json
+# Azurite artifacts (Azure Storage Emulator)
+__blobstorage__/
+__queuestorage__/
+__azurite_db*.json
+AzuriteConfig
+AzuriteConfig.*
+*.azurite
 
 # Frontend
 frontend/node_modules
 frontend/build
 frontend/.env.local
+frontend/.env.production
 
 # Testing
 testing/node_modules

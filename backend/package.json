@@ -8,8 +8,12 @@
     "deploy": "func azure functionapp publish captiongen-func-xyz --build remote"
   },
   "dependencies": {
+    "azure-storage": "^2.10.7",
+    "firebase-admin": "^12.7.0",
+    "joi": "^17.9.0",
+    "jsonwebtoken": "^9.0.0",
     "openai": "^5.0.1",
-    "sharp": "^0.34.2"
-  },
-  "devDependencies": {}
+    "sharp": "^0.34.2",
+    "uuid": "^9.0.0"
+  }
 }

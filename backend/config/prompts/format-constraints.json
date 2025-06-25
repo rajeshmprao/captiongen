@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-06-22",
+  "formatConstraints": {
+    "outputRules": [
+      "Return ONLY plain text - no HTML, XML, Markdown, or JSON formatting",
+      "Do NOT use asterisks (*), underscores (_), backticks (`), or any markup syntax",
+      "Do NOT return structured data, lists, or multiple sections",
+      "Do NOT use headers, bullet points, or numbered lists",
+      "Return exactly one Instagram caption as plain text",
+      "Include emojis naturally within the text, not as separate elements"
+    ],
+    "forbiddenFormats": [
+      "**bold text** or *italic text*",
+      "# headers or ## subheaders",
+      "- bullet points or 1. numbered lists",
+      "```code blocks``` or ```markdown```",
+      "{\"json\": \"format\"} or <xml>tags</xml>",
+      "Multiple paragraphs or sections"
+    ],
+    "correctFormat": "Plain text caption with natural emoji placement like this example ✨",
+    "template": "\n\nCRITICAL OUTPUT FORMAT REQUIREMENTS:\n- Return ONLY plain text - no HTML, XML, Markdown, or JSON formatting\n- Do NOT use asterisks (*), underscores (_), backticks (`), or any markup syntax\n- Do NOT return structured data, lists, or multiple sections\n- Do NOT use headers, bullet points, or numbered lists\n- Return exactly one Instagram caption as plain text\n- Include emojis naturally within the text, not as separate elements\n\nFORBIDDEN FORMATS:\n❌ **bold text** or *italic text*\n❌ # headers or ## subheaders  \n❌ - bullet points or 1. numbered lists\n❌ ```code blocks``` or ```markdown```\n❌ {\"json\": \"format\"} or <xml>tags</xml>\n❌ Multiple paragraphs or sections\n\nCORRECT FORMAT: \n✅ Plain text caption with natural emoji placement like this example ✨"
+  }
+}

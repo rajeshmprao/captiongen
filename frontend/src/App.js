@@ -1,5 +1,6 @@
 import React from 'react';
 import AppHeader from './layouts/AppHeader';
+import AuthButton from './components/AuthButton';
 import ApiKeySection from './sections/ApiKeySection';
 import ModeToggleSection from './sections/ModeToggleSection';
 import UploadSection from './sections/UploadSection';
@@ -11,6 +12,7 @@ import { useApiKey } from './hooks/useApiKey';
 import { useImageState } from './hooks/useImageState';
 import { useVibeControl } from './hooks/useVibeControl';
 import { useCaptionGeneration } from './hooks/useCaptionGeneration';
+import { apiService } from './services/apiService';
 
 function App() {
   // Custom hooks for state management
@@ -45,12 +47,12 @@ function App() {
     setShowAllTypes,
     applyTweak
   } = useVibeControl();
-
   const {
     caption,
     carouselResult,
     loading,
     error,
+    errorDebugInfo,
     resultsRef,
     generateSingleCaption,
     generateCarouselCaption,
@@ -101,15 +103,19 @@ function App() {
     applyTweak(tweakType);
     setTimeout(() => generateCaption(), 100);
   };
-
   // Check if generate button should be disabled
-  const isGenerateDisabled = (isCarouselMode ? images.length === 0 : !image) || loading || !apiKey.trim();
-
+  const isAuthenticated = React.useMemo(() => {
+    return apiService.authService.isAuthenticated() || false;
+  }, []);
+  
+  const isGenerateDisabled = (isCarouselMode ? images.length === 0 : !image) || loading || (!isAuthenticated && !apiKey.trim());
   return (
     <div className="min-h-screen bg-gray-50">
       <AppHeader />
 
       <main className="container mx-auto px-4 py-8 max-w-6xl">
+        <AuthButton />
+        
         <ApiKeySection 
           apiKey={apiKey}
           setApiKey={setApiKey}
@@ -147,7 +153,7 @@ function App() {
           onToggleShowAll={() => setShowAllTypes(!showAllTypes)}
         />
 
-        <ErrorDisplay error={error} />
+        <ErrorDisplay error={error} debugInfo={errorDebugInfo} />
 
         <LoadingButton 
           onClick={generateCaption}

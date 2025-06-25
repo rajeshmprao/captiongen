@@ -2,6 +2,7 @@ const OpenAI = require("openai");
 const Sharp = require("sharp");
 const { generateCarouselInstructions, parseCarouselResponse } = require("./carouselPromptGenerator");
 const telemetry = require("../GenerateCaption/telemetry");
+const AuthMiddleware = require("../services/AuthMiddleware");
 
 function generateRequestId() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -10,13 +11,13 @@ function generateRequestId() {
 module.exports = async function (context, req) {
   const requestId = generateRequestId();
   const requestStartTime = Date.now();
-  context.log.info({ requestId }, "GenerateCarouselCaption function invoked");
-  
-  // Add CORS headers to all responses
+  let userId = 'unknown'; // Declare at function scope for error handling
+  context.log.info("GenerateCarouselCaption function invoked", { requestId });
+    // Add CORS headers to all responses
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "86400"
   };
 
@@ -38,44 +39,45 @@ module.exports = async function (context, req) {
     };
     return;
   }
-
   try {
     // Check content type
     if (!req.headers["content-type"]?.includes("application/json")) {
       throw new Error("Content-Type must be application/json");
     }
 
-    context.log.info({}, "Processing JSON payload for carousel");
+    // Authenticate request - support both JWT and legacy apiKey
+    const authMiddleware = new AuthMiddleware();
+    const authResult = await authMiddleware.authenticateRequest(req);
+    
+    if (!authResult) {
+      throw new Error("Authentication required. Please provide valid authorization or API key.");
+    }    context.log.info("Request authenticated successfully", { 
+      requestId, 
+      userId: authResult.userId,
+      authMethod: authResult.sessionId ? 'jwt' : 'apikey',
+      isLegacy: authResult.isLegacyUser || false
+    });
+
+    // Check usage limits (legacy users have unlimited access)
+    const hasUsageLeft = await authMiddleware.checkUsageLimit(authResult.userId, authResult.isLegacyUser);
+    if (!hasUsageLeft) {
+      throw new Error("Usage limit exceeded. Please upgrade your plan or try again next month.");
+    }
+
+    context.log.info("Processing JSON payload for carousel");
     
     // Parse JSON body - expect images array instead of single image
-    const { images, captionType = "default", vibes, apiKey } = req.body;
+    const { images, captionType = "default", vibes } = req.body;
     
-    if (!images || !Array.isArray(images) || images.length === 0 || !apiKey) {
-      throw new Error("Missing required fields: images (array) and apiKey");
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      throw new Error("Missing required field: images (array)");
     }
 
     // Validate image count (2-3 images for now)
     if (images.length < 2 || images.length > 3) {
-      throw new Error("Carousel requires 2-3 images");
-    }
-
-    // Shared-secret check
-    const SHARED_SECRET = process.env["SHARED_SECRET"];
-    if (apiKey !== SHARED_SECRET) {
-      const userId = telemetry.getUserId(req);
-      telemetry.logAuthFailure(context, { requestId, userId });
-      context.log.warn({ requestId }, "Authorization failed");
-      context.res = { 
-        status: 401, 
-        headers: corsHeaders,
-        body: { error: "Unauthorized" } 
-      };
-      return;
-    }
-
-    // Generate user identifier for telemetry
-    const userId = telemetry.getUserId(req);    // Log carousel request details with enhanced context
-    telemetry.logRequestStart(context, {
+      throw new Error("Carousel requires 2-3 images");    }    // Generate user identifier for telemetry (use authenticated user ID)
+    userId = authResult.userId;    // Log carousel request details with enhanced context
+    telemetry.logCarouselRequestStart(context, {
       requestId,
       userId,
       requestType: vibes && Object.keys(vibes).length > 0 ? "carousel-vibes-enhanced" : "carousel-captionType-enhanced",
@@ -86,7 +88,7 @@ module.exports = async function (context, req) {
       timestamp: new Date().toISOString()
     });
 
-    context.log.info({ imageCount: images.length }, "Processing images for carousel");
+    context.log.info("Processing images for carousel", { imageCount: images.length });
 
     // Process all images
     const processedImages = [];
@@ -101,11 +103,10 @@ module.exports = async function (context, req) {
       try {
         // Remove data URL prefix if present (data:image/jpeg;base64,)
         const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '');
-        fileBuffer = Buffer.from(base64Data, 'base64');
-        context.log.info({ 
+        fileBuffer = Buffer.from(base64Data, 'base64');        context.log.info("Converted base64 to buffer", { 
           imageIndex: i + 1, 
           bufferSize: fileBuffer.length 
-        }, "Converted base64 to buffer");
+        });
         totalOriginalSize += fileBuffer.length;
       } catch (base64Error) {
         throw new Error(`Invalid base64 image data for image ${i + 1}`);
@@ -119,18 +120,17 @@ module.exports = async function (context, req) {
       // Detect image format
       let imageFormat = 'jpeg';
       if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) {
-        imageFormat = 'png';
-        context.log.info({ imageIndex: i + 1 }, "Detected PNG format");
+        imageFormat = 'png';        context.log.info("Detected PNG format", { imageIndex: i + 1 });
       } else if (fileBuffer[0] === 0xFF && fileBuffer[1] === 0xD8) {
         imageFormat = 'jpeg';
-        context.log.info({ imageIndex: i + 1 }, "Detected JPEG format");
+        context.log.info("Detected JPEG format", { imageIndex: i + 1 });
       } else {
-        context.log.warn({ 
+        context.log.warn("Unknown image format detected", { 
           imageIndex: i + 1, 
           firstBytes: fileBuffer.slice(0, 4).toString('hex') 
-        }, "Unknown image format detected");
+        });
       }      // Process with Sharp (optimized for photo dump analysis)
-      context.log.info({ imageIndex: i + 1 }, "Processing image with Sharp");
+      context.log.info("Processing image with Sharp", { imageIndex: i + 1 });
       const resizedBuffer = await Sharp(fileBuffer)
         .resize(768, 768, { // Increased resolution for better photo dump context
           fit: 'inside', 
@@ -143,12 +143,11 @@ module.exports = async function (context, req) {
         })
         .toBuffer();
 
-      totalProcessedSize += resizedBuffer.length;
-      context.log.info({ 
+      totalProcessedSize += resizedBuffer.length;      context.log.info("Image processing completed", { 
         imageIndex: i + 1, 
         originalSize: fileBuffer.length, 
         processedSize: resizedBuffer.length 
-      }, "Image processing completed");
+      });
 
       // Convert to base64 for OpenAI
       const imageData = `data:image/jpeg;base64,${resizedBuffer.toString('base64')}`;
@@ -176,7 +175,7 @@ module.exports = async function (context, req) {
     });
 
     const client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
-    context.log.info({}, "Calling OpenAI for carousel generation");
+    context.log.info("Calling OpenAI for carousel generation");
     
     const llmStartTime = Date.now();
       // Create messages array with all images - use higher detail for better photo dump analysis
@@ -208,7 +207,7 @@ module.exports = async function (context, req) {
     });
 
     const llmEndTime = Date.now();
-    context.log.info({ responseTime: llmEndTime - llmStartTime }, "OpenAI response received");
+    context.log.info("OpenAI response received", { responseTime: llmEndTime - llmStartTime });
 
     if (!aiResponse.choices || aiResponse.choices.length === 0) {
       throw new Error("No response from AI service");
@@ -219,11 +218,13 @@ module.exports = async function (context, req) {
       throw new Error("Empty response from AI service");
     }
 
-    context.log.info({}, "Parsing carousel response");
+    context.log.info("Parsing carousel response");
     
     // Parse the structured response into master + individual captions
     const carouselResult = parseCarouselResponse(rawCaption, images.length);    // Log successful completion with enhanced analysis metrics
-    const totalTime = Date.now() - requestStartTime;    context.log.info({
+    const totalTime = Date.now() - requestStartTime;
+    
+    context.log.info("Enhanced carousel caption generated successfully", {
       requestId,
       userId,
       imageCount: images.length,
@@ -232,7 +233,43 @@ module.exports = async function (context, req) {
       analysisQuality: carouselResult.analysisQuality || 'structured',
       masterCaptionLength: carouselResult.masterCaption.length,
       avgIndividualLength: Math.round(carouselResult.individualCaptions.reduce((acc, cap) => acc + cap.length, 0) / carouselResult.individualCaptions.length)
-    }, "Enhanced carousel caption generated successfully");
+    });
+
+    // Log carousel completion telemetry
+    telemetry.logCarouselRequestComplete(context, {
+      requestId,
+      userId,
+      totalDuration: totalTime,
+      imageCount: images.length,
+      masterCaptionLength: carouselResult.masterCaption.length,
+      avgIndividualLength: Math.round(carouselResult.individualCaptions.reduce((acc, cap) => acc + cap.length, 0) / carouselResult.individualCaptions.length),
+      analysisQuality: carouselResult.analysisQuality || 'structured'
+    });
+
+    // Track usage for all authenticated users (including legacy users)
+    try {
+      const userService = authMiddleware.userService;
+      const totalImages = images.length;
+      const totalTokens = aiResponse.usage?.total_tokens || 0;
+      const totalImageSize = processedImages.reduce((sum, img) => sum + img.size, 0);
+      
+      await userService.trackUsage(
+        authResult.userId, 
+        'carousel', 
+        totalTokens, 
+        totalImageSize, 
+        true
+      );      
+      context.log.info("Carousel usage tracked successfully", { 
+        userId: authResult.userId, 
+        tokensUsed: totalTokens,
+        imageCount: totalImages,
+        userType: authResult.isLegacyUser ? 'legacy' : 'firebase'
+      });
+    } catch (usageError) {
+      context.log.error("Failed to track carousel usage", { error: usageError.message });
+      // Don't fail the request if usage tracking fails
+    }
 
     context.res = {
       status: 200,
@@ -244,24 +281,30 @@ module.exports = async function (context, req) {
     };
 
   } catch (error) {
-    const userId = telemetry.getUserId(req);    context.log.error({
+    // Use the authenticated user ID for error logging
+    const errorUserId = typeof authResult !== 'undefined' ? authResult.userId : 'unknown';
+      context.log.error("Error in GenerateCarouselCaption", {
       requestId,
-      userId,
+      userId: errorUserId,
       error: error.message,
       stack: error.stack
-    }, "Error in GenerateCarouselCaption");
+    });
 
     const totalTime = Date.now() - requestStartTime;
-    
-    context.res = {
+      context.res = {
       status: 500,
       headers: corsHeaders,
       body: { 
         error: process.env.NODE_ENV === 'development' 
           ? error.message 
           : "Internal server error generating carousel caption",
-        requestId,
-        totalTime
+        debugInfo: {
+          requestId,
+          timestamp: new Date().toISOString(),
+          duration: totalTime,
+          errorType: error.name || 'Error',
+          functionName: 'GenerateCarouselCaption'
+        }
       }
     };
   }

@@ -1,0 +1,13 @@
+{
+  "name": "azurite-analyzer",
+  "version": "1.0.0",
+  "description": "Tool to analyze data stored in Azurite (Azure Storage Emulator)",
+  "main": "azurite-analyzer.js",
+  "scripts": {
+    "analyze": "node azurite-analyzer.js",
+    "help": "echo 'Usage: npm run analyze'"
+  },
+  "dependencies": {
+    "@azure/data-tables": "^13.2.2"
+  }
+}
