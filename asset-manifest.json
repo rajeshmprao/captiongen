@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/captiongen/static/css/main.2d651ca8.css",
-    "main.js": "/captiongen/static/js/main.590b5041.js",
+    "main.css": "/captiongen/static/css/main.d50e4396.css",
+    "main.js": "/captiongen/static/js/main.1ffadc50.js",
     "index.html": "/captiongen/index.html",
-    "main.2d651ca8.css.map": "/captiongen/static/css/main.2d651ca8.css.map",
-    "main.590b5041.js.map": "/captiongen/static/js/main.590b5041.js.map"
+    "main.d50e4396.css.map": "/captiongen/static/css/main.d50e4396.css.map",
+    "main.1ffadc50.js.map": "/captiongen/static/js/main.1ffadc50.js.map"
   },
   "entrypoints": [
-    "static/css/main.2d651ca8.css",
-    "static/js/main.590b5041.js"
+    "static/css/main.d50e4396.css",
+    "static/js/main.1ffadc50.js"
   ]
 }
