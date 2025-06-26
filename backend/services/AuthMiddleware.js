@@ -129,7 +129,7 @@ class AuthMiddleware {
       throw new Error(`Firebase token validation failed: ${error.message}`);
     }
   }
-  async generateJwtToken(firebaseUserData) {try {
+  async generateJwtToken(firebaseUserData, requestId = null) {try {
       // Ensure user exists in database
       let user = await this.userService.getUser(firebaseUserData.userId);
       if (!user) {
@@ -153,7 +153,7 @@ class AuthMiddleware {
       const token = jwt.sign(payload, this.jwtSecret);
 
       // Create session record
-      await this.userService.createSession(firebaseUserData.userId, jwtId, 'web');
+      await this.userService.createSession(firebaseUserData.userId, jwtId, 'web', requestId);
 
       return {
         token: token,

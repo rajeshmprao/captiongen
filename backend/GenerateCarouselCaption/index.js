@@ -258,7 +258,8 @@ module.exports = async function (context, req) {
         'carousel', 
         totalTokens, 
         totalImageSize, 
-        true
+        true,
+        requestId  // Pass requestId for correlation with Application Insights
       );      
       context.log.info("Carousel usage tracked successfully", { 
         userId: authResult.userId, 

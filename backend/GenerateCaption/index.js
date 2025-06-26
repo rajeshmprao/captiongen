@@ -202,7 +202,8 @@ module.exports = async function (context, req) {
         'caption', 
         aiResponse.usage?.total_tokens || 0, 
         resizedBuffer.length, 
-        true
+        true,
+        requestId  // Pass requestId for correlation with Application Insights
       );      
       context.log.info("Usage tracked successfully", { 
         userId: authResult.userId, 

@@ -51,7 +51,7 @@ module.exports = async function (context, req) {
     }
 
     // Generate JWT token using AuthMiddleware
-    const tokenData = await authMiddleware.generateJwtToken(firebaseUserData);    context.log.info("JWT token generated successfully", { 
+    const tokenData = await authMiddleware.generateJwtToken(firebaseUserData, requestId);    context.log.info("JWT token generated successfully", { 
       requestId, 
       userId: firebaseUserData.userId,
       authType: 'firebase'

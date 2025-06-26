@@ -10,6 +10,9 @@ class UserService {
   async ensureTablesExist() {
     if (this.tablesInitialized) return;
     
+    console.log('UserService: Initializing tables...');
+    console.log('UserService: Storage connection string:', process.env.STORAGE_CONNECTION_STRING ? 'Present' : 'Missing');
+    
     const tables = ['Users', 'UserSessions', 'UserUsage'];
     for (const tableName of tables) {
       await new Promise((resolve, reject) => {
@@ -73,10 +76,11 @@ class UserService {
     });
   }
 
-  async createSession(userId, jwtId, clientType = 'web') {
+  async createSession(userId, jwtId, clientType = 'web', requestId = null) {
     const session = {
       PartitionKey: 'session',
       RowKey: jwtId,
+      RequestId: requestId, // Correlation ID for Application Insights
       UserId: userId,
       CreatedAt: new Date().toISOString(),
       ExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
@@ -122,11 +126,12 @@ class UserService {
     });
   }
 
-  async trackUsage(userId, requestType, tokensUsed, imageSize, success = true) {
+  async trackUsage(userId, requestType, tokensUsed, imageSize, success = true, requestId = null) {
     const monthKey = new Date().toISOString().substring(0, 7); // YYYY-MM
     const usage = {
       PartitionKey: `usage_${monthKey}`,
       RowKey: `${userId}_${Date.now()}_${uuidv4()}`,
+      RequestId: requestId, // Correlation ID for Application Insights
       UserId: userId,
       RequestType: requestType,
       Timestamp: new Date().toISOString(),
